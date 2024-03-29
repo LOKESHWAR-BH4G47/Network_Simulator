@@ -58,7 +58,7 @@ def visualize_topology():
 
 def main():
     # Example usage and visualization
-    hub, devices = create_star_topology(5)
+    hub, devices = create_star_topology(6)
     visualize_topology()
 
 if __name__ == "__main__":
