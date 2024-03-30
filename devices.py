@@ -47,6 +47,7 @@ def main():
 
     s = int(input("enter the device number who want to send:  "))
     r = int(input("enter the device number you want to send:  "))
+ 
 
 
     devices[s-1].send_data("10101", hub, devices[r-1]) # Corrected data to string
