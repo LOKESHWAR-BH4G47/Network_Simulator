@@ -1,3 +1,5 @@
+from cryptography.fernet import Fernet
+
 class Device:
     def __init__(self, name):
         self.name = name
@@ -41,7 +43,7 @@ def main():
 
     hub = Hub("CentralHub")
     devices = [Device(f"Device{i}") for i in range(1, n_devices + 1 )]
-
+ 
     for device in devices:
         hub.connect(device)
 
