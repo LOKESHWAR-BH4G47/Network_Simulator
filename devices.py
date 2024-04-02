@@ -60,7 +60,7 @@ def main():
  
 
 
-    devices[s-1].send_data("10101", hub, devices[r-1]) # Corrected data to string
+    devices[s-1].send_data("10101", hub, devices[r-1]) # Corrected data to  stringg
 
 if __name__ == "__main__":
     main()
