@@ -38,15 +38,29 @@ class Device:
         self.connected_devices.append(other_device)
         other_device.connected_devices.append(self)
 
+    def add_parity(self, data):
+        parity_bit = str(data.count('1') % 2)  # Simple even parity
+        return data + parity_bit 
+
     def send_data(self, data, hub,hub2,switch, receiver):
         print(f"{self.name} is sending data to {receiver.name}: {data}")
-        Message = EncryptData.encMessage(data)
+        print("Adding parity check to data")
+        data_with_parity = self.add_parity(data)
+        print(f"{self.name} sending {data_with_parity} to {receiver.name}") 
+
+        Message = EncryptData.encMessage(data_with_parity)
         hub.receive_from_hdevice(Message,hub,hub2,switch ,self.mac_address, receiver.mac_address, self.name, receiver.name)
 
     def receive_data(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac, sender_name,receiver_name):
         if self.mac_address == receiver_mac:
             Message = DecryptData.decMessage(encMessage)
-            print(f"{self.name} received data from {sender_name}: {Message}")
+            original_data, parity_bit = Message[:-1], Message[-1]
+            expected_parity = str(original_data.count('1') % 2)
+            if parity_bit == expected_parity:
+                print(f"{self.name} received data successfully: {original_data}")
+            else:
+                print(f"{self.name} detected parity error in received data: {data}")
+            
         else:
             print(f"{self.name} rejected data {encMessage} from {sender_name}")
  
