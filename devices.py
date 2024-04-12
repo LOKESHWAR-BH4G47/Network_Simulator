@@ -38,12 +38,12 @@ class Device:
         self.connected_devices.append(other_device)
         other_device.connected_devices.append(self)
 
-    def send_data(self, data, hub,switch, receiver):
+    def send_data(self, data, hub,hub2,switch, receiver):
         print(f"{self.name} is sending data to {receiver.name}: {data}")
         Message = EncryptData.encMessage(data)
-        hub.receive_from_hdevice(Message,hub,switch ,self.mac_address, receiver.mac_address, self.name, receiver)
+        hub.receive_from_hdevice(Message,hub,hub2,switch ,self.mac_address, receiver.mac_address, self.name, receiver.name)
 
-    def receive_data(self, encMessage,hub,switch, sender_mac, receiver_mac, sender_name,receiver_name):
+    def receive_data(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac, sender_name,receiver_name):
         if self.mac_address == receiver_mac:
             Message = DecryptData.decMessage(encMessage)
             print(f"{self.name} received data from {sender_name}: {Message}")
@@ -63,16 +63,25 @@ class Hub(Device):
         device.connected_devices.append(self)
         print(f"{self.name} connected to {device.name}")
 
-    def receive_from_hdevice(self, encMessage,hub,switch, sender_mac, receiver_mac,sender_name,receiver_name):
+    def receive_from_hdevice(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name):
         print(f"{self.name} received data from {sender_name} and is forwarding it.")
-        self.send_from_hub(encMessage,hub,switch, sender_mac, receiver_mac,sender_name,receiver_name)
+        self.send_from_hub(encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name)
 
-    def send_from_hub(self, encMessage,hub,switch, sender_mac, receiver_mac,sender_name,receiver_name):
+    def send_from_hub(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name):
         for device in self.connected_devices:
             if device.mac_address != sender_mac:
-                device.receive_data(encMessage,hub,switch, sender_mac, receiver_mac,sender_name,receiver_name)
-                
-        switch.recieve_from_sdevice(encMessage, hub,switch, sender_mac, receiver_mac,sender_name,receiver_name)
+                device.receive_data(encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name)   
+        if hub != hub2:
+            switch.recieve_from_sdevice(encMessage, hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name) 
+
+    def receive_from_switch_device(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name):
+        print(f"{hub2.name} received data from {sender_name} and is forwarding it.")
+        self.send_from_hub_dev(encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name)
+
+    def send_from_hub_dev(self, encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name):
+        for device in hub2.connected_devices:
+            if device.mac_address != sender_mac:
+                device.receive_data(encMessage,hub,hub2,switch, sender_mac, receiver_mac,sender_name,receiver_name)
 
 
 
@@ -110,29 +119,29 @@ class Switch(Device):
         for mac,port in self.mac_table.items():
             print("Comparing with MAC in table:", mac)
             if mac == mac_address:
-                print("MAC address found:", mac_address)
+                print("MAC address found:", mac_address,"on port",port)
                 return port
         print("MAC address not found:", mac_address)
         return None
 
 
-    def recieve_from_sdevice(self,encMessage,hub, switch, sender_mac,receiver_mac,sender_name,receiver_name):
-        print(f"{self.name} received data from {sender_name} and is forwarding it to {receiver_name.name}.")
+    def recieve_from_sdevice(self,encMessage,hub,hub2, switch, sender_mac,receiver_mac,sender_name,receiver_name):
+        print(f"{self.name} received data from {sender_name} and is forwarding it to {receiver_name}.")
 
 
-        self.send_from_switch(encMessage,hub,switch,sender_mac,receiver_mac,sender_name,receiver_name)
+        self.send_from_switch(encMessage,hub,hub2,switch,sender_mac,receiver_mac,sender_name,receiver_name)
 
 
-    def send_from_switch(self, encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name):
+    def send_from_switch(self, encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name):
         sender_length = len(sender_name) 
-        sender_number = int(sender_name[sender_length-1])
+        sender_number =int( ''.join(filter(str.isdigit, sender_name)))
         if sender_number <= 5:
             self.learn_mac(sender_mac, 1)
         else:
             self.learn_mac(sender_mac, 2)
         # reciever_length = len(receiver_name.name)  
         # reciever_number = int(receiver_name.name[reciever_length-1])
-        receiver_number = int(receiver_name.name.replace('Device', ''))
+        receiver_number = int(receiver_name.replace('Device', ''))
         if receiver_number <= 5:
             self.learn_mac(receiver_mac, 1)  # Learn receiver's MAC address 
         else:
@@ -146,21 +155,16 @@ class Switch(Device):
         if sender_port is None:
             print(f"{self.name} doesn't have MAC address {sender_mac} in its table.")
             return
-        print(receiver_port)
+        print(receiver_port) 
         if receiver_port is not None:
             if receiver_port != sender_port:
-                print(self.connected_devices)
-                if receiver_port in self.connected_devices:
-                    print(f"{self.name} received data from {sender_name} and is forwarding it to {receiver_name.name}.")
-                    self.receive_data(encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name)
-                else:
-                    print(f"{self.name} received data from {sender_name} and forwarding it to Hub {hub.name}.") 
-                    hub.receive_from_hdevice(encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name)
+                print(f"{self.name} received data from {sender_name} and is forwarding to {receiver_name} at port{receiver_port}")
+                hub.receive_from_switch_device(encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name)
         else:
             print(f"{self.name} doesn't have MAC address {receiver_mac} in its table. Flooding the frame to all ports except the sender's port.")
-            self.flood_frame(encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name, sender_port)
+            self.flood_frame(encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name, sender_port)
 
-    def flood_frame(self, encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name, sender_port):
+    def flood_frame(self, encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name, sender_port):
         """
         Floods the frame to all ports except the sender's port.
         """
@@ -169,7 +173,7 @@ class Switch(Device):
             if port != sender_port and port != "Port 1" and port != "Port 2":  # Exclude sender's port and switch ports
                 if isinstance(device, Hub):
                     print(f"Flooding frame to Hub {device.name}.")
-                    device.receive_from_hdevice(encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name)
+                    device.receive_from_hdevice(encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name)
                 else:
                     print(f"Flooding frame to Device {device.name}.")
-                    device.receive_data(encMessage, hub, switch, sender_mac, receiver_mac, sender_name, receiver_name)
+                    device.receive_data(encMessage, hub,hub2, switch, sender_mac, receiver_mac, sender_name, receiver_name)
