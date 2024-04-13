@@ -125,13 +125,8 @@ class Switch(Device):
 
     
     def find_port_by_mac(self, mac_address):
-        """
-        Finds the port associated with a MAC address.
-        """
-        print("Searching for MAC address:", mac_address)
-        print("MAC Table:", self.mac_table)
+      
         for mac,port in self.mac_table.items():
-            print("Comparing with MAC in table:", mac)
             if mac == mac_address:
                 print("MAC address found:", mac_address,"on port",port)
                 return port
@@ -161,15 +156,15 @@ class Switch(Device):
         else:
             self.learn_mac(receiver_mac, 2)
         
-        print(sender_mac)
+        
         sender_port = self.find_port_by_mac(sender_mac)
-        print(receiver_mac)
+        
         receiver_port = self.find_port_by_mac(receiver_mac)
 
         if sender_port is None:
             print(f"{self.name} doesn't have MAC address {sender_mac} in its table.")
             return
-        print(receiver_port) 
+        
         if receiver_port is not None:
             if receiver_port != sender_port:
                 print(f"{self.name} received data from {sender_name} and is forwarding to {receiver_name} at port{receiver_port}")
